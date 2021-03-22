@@ -1,0 +1,34 @@
+package daemon
+
+import (
+	"net/http"
+
+	"{{pkg}}/configure"
+	"{{pkg}}/web"
+	"{{pkg}}/web/api"{{if view}}
+	"{{pkg}}/web/static"
+	"{{pkg}}/web/view"{{/if}}
+
+	"github.com/gin-gonic/gin"
+)
+
+func newHandler() http.Handler {
+	cnf := configure.DefaultConfigure().HTTP
+	accounts := make(gin.Accounts)
+	for _, item := range cnf.BasicAuth {
+		accounts[item.Name] = item.Password
+	}
+	router := gin.Default()
+	if len(accounts) != 0 {
+		router.Use(gin.BasicAuth(accounts))
+	}
+	rs := []web.IHelper{
+		api.Helper{},{{if view}}
+		static.Helper{},
+		view.Helper{},{{/if}}
+	}
+	for _, r := range rs {
+		r.Register(&router.RouterGroup)
+	}
+	return router
+}

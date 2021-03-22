@@ -1,0 +1,68 @@
+local Millisecond = 1;
+local Second = 1000 * Millisecond;
+local Minute = 60 * Second;
+local Hour = 60 * Minute;
+local Day = 24 * Hour;
+
+local KB = 1024;
+local MB = 1024*KB;
+local GB = 1024*MB;
+
+{
+	HTTP: {
+		Addr: ":9000",
+		// x509 if empty use h2c
+		// CertFile: "test.pem",
+		// KeyFile: "test.key",
+		// http body limit default 32k
+		MaxBytesReader: KB*32,
+		// BasicAuth:[
+		// 	{
+		// 		Name: "root",
+		// 		Password: "123",
+		// 	},
+		// ],
+	},{{if db}}
+	DB: {
+		// driver [mysql mssql sqlite3]
+		Driver: "sqlite3",
+		// connection string
+		// Str: "{{project}}:12345678@tcp(localhost:3306)/{{project}}?charset=utf8", // mysql
+		// Str: "server=127.0.0.1;port=1433;user id={{project}};password=12345678;database={{project}};encrypt=disable;", // mssql
+		Str: "{{project}}.db", // sqlite3
+		// Show: true,
+		// max connections if < 1 not not limited
+		MaxOpen: 50,
+		// idle connections if < 1  not exists idle
+		MaxIdle: 10,
+		Cache: {
+			// Default cache record , if < 1 not use default cache
+			Record: 1000,
+			// These tables not use cache
+			Direct: [],
+			// These tables use special cache
+			// Special: [
+			// 	{
+			// 		Name: "user",
+			// 		Record: 100,
+			// 	},
+			// ]
+		}
+	},{{/if}}
+	Logger: {
+		// log save filename
+		Filename:"logs/{{project}}.log",
+		// MB
+		MaxSize:    100, 
+		// number of files
+		MaxBackups: 3,
+		// day
+		MaxAge:     28,
+		// if true output code line
+		Caller:true,
+		// file log level [debug info warn error dpanic panic fatal]
+		FileLevel: "info",
+		// console file level [debug info warn error dpanic panic fatal]
+		ConsoleLevel: "info",
+	},
+}

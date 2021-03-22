@@ -1,0 +1,21 @@
+module {{pkg}}
+
+go 1.15
+
+require (
+	github.com/andybalholm/brotli v1.0.1
+	github.com/gin-gonic/gin v1.6.3
+	github.com/google/go-jsonnet v0.17.0{{if db}}
+	xorm.io/xorm v1.0.7
+	github.com/denisenkom/go-mssqldb v0.9.0
+	github.com/go-sql-driver/mysql v1.5.0
+	github.com/mattn/go-sqlite3 v1.14.6{{/if}}
+	github.com/gorilla/websocket v1.4.2{{if view}}
+	github.com/rakyll/statik v0.1.7{{/if}}
+	github.com/spf13/cobra v1.1.1
+	github.com/stretchr/testify v1.7.0
+	go.uber.org/zap v1.16.0
+	golang.org/x/net v0.0.0-20190620200207-3b0461eec859
+	gopkg.in/natefinch/lumberjack.v2 v2.0.0
+	gopkg.in/yaml.v2 v2.2.8
+)

@@ -1,0 +1,40 @@
+#!/usr/bin/env node
+"use strict";
+const { Command } = require('./js-build/commander')
+const { Append } = require('./js-build/lib/utils')
+const { Build, BuildTest, BuildVersion } = require('./js-build/lib/build')
+const { BuildSource } = require('./js-build/lib/source')
+const { BuildView } = require('./js-build/lib/view')
+const Name = '{{project}}'
+const PackageName = '{{pkg}}'
+const UseView = {{view}}
+const TestBench = [
+    'utils'
+]
+const TestUnit = Append(TestBench)
+const program = new Command('./build.js')
+const Arch = ['amd64', '386']
+Build(program, 'linux', Arch,
+    Name, '',
+    `${Name}.jsonnet`,
+)
+Build(program, 'freebsd', Arch,
+    Name, '',
+    `${Name}.jsonnet`,
+)
+Build(program, 'darwin', Arch,
+    Name, '',
+    `${Name}.jsonnet`,
+)
+Build(program, 'windows', Arch,
+    Name, '.exe',
+    `${Name}.jsonnet`,
+)
+
+BuildVersion(program)
+BuildTest(program, PackageName, TestUnit, TestBench)
+if (UseView) {
+    BuildSource(program, UseView)
+    BuildView(program)
+}
+program.parse(process.argv)
