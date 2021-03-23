@@ -1,0 +1,33 @@
+<div class="viewcard">
+    <mat-card>
+        <mat-card-title>
+            <ng-container i18n>Welcome to use this system</ng-container>
+        </mat-card-title>
+        <mat-card-content>
+            <p i18n>
+                This is a system built by the jsgenerate_gin template.
+                jsgenerate_gin is a open source template developed by 飛天小企鵝 . For more information about
+                jsgenerate_gin, please see source
+                description.
+            </p>
+            <a mat-button href="https://github.com/powerpuffpenguin/jsgenerate_gin" target="_blank" i18n>Source Code
+            </a>
+        </mat-card-content>
+    </mat-card>
+    <mat-card *ngIf="license">
+        <mat-card-title>
+            LICENSE
+        </mat-card-title>
+        <mat-card-content>
+            <pre>{{license}}</pre>
+        </mat-card-content>
+    </mat-card>
+    <mat-card *ngIf="licenses">
+        <mat-card-title>
+            3rdpartylicenses.txt
+        </mat-card-title>
+        <mat-card-content>
+            <pre>{{licenses}}</pre>
+        </mat-card-content>
+    </mat-card>
+</div>

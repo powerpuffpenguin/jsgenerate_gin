@@ -17,5 +17,6 @@ func Init(basePath string, options *Options) (e error) {
 		}
 	}
 	Logger.Attach(NewHelper(options))
+	defaultFilesystem.onStart(options.Filename)
 	return
 }

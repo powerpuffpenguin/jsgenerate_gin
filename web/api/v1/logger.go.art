@@ -7,6 +7,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 // Logger .
@@ -16,8 +18,97 @@ type Logger struct {
 
 // Register impl IHelper
 func (h Logger) Register(router *gin.RouterGroup) {
-	r := router.Group(`features/loggers`)
+	r := router.Group(`loggers`)
+	r.GET(``, h.get)
+	r.GET(`level`, h.level)
+	r.POST(`level`, h.setLevel)
 	r.GET(`attach/websocket`, h.attach)
+	r.GET(`download/:name`, h.download)
+}
+func (h Logger) get(c *gin.Context) {
+	filesystem := logger.DefaultFilesystem()
+	stat, e := filesystem.Stat()
+	if e != nil {
+		return
+	}
+	modtime := stat.ModTime()
+	h.NegotiateDelay(c, modtime, func() (interface{}, error) {
+		names, e := filesystem.List()
+		if e != nil {
+			return nil, e
+		}
+		c.Writer.Header().Set(`Cache-Control`, `max-age=60`)
+		return gin.H{
+			`names`: names,
+		}, nil
+	})
+}
+func (h Logger) level(c *gin.Context) {
+	file, e := logger.Logger.FileLevel().MarshalText()
+	if e != nil {
+		h.NegotiateError(c, http.StatusInternalServerError, e)
+		return
+	}
+	console, e := logger.Logger.ConsoleLevel().MarshalText()
+	if e != nil {
+		h.NegotiateError(c, http.StatusInternalServerError, e)
+		return
+	}
+	h.NegotiateData(c, http.StatusOK, gin.H{
+		`file`:    string(file),
+		`console`: string(console),
+	})
+}
+func (h Logger) setLevel(c *gin.Context) {
+	var params struct {
+		Level string `form:"level" json:"level" xml:"level" yaml:"level" binding:"required"`
+		Tag   string `form:"tag" json:"tag" xml:"tag" yaml:"tag" binding:"required"`
+	}
+	e := h.Bind(c, &params)
+	if e != nil {
+		return
+	}
+	var (
+		at    zap.AtomicLevel
+		level zapcore.Level
+	)
+	switch params.Level {
+	case "debug":
+		level = zap.DebugLevel
+	case "info":
+		level = zap.InfoLevel
+	case "warn":
+		level = zap.WarnLevel
+	case "error":
+		level = zap.ErrorLevel
+	case "dpanic":
+		level = zap.DPanicLevel
+	case "panic":
+		level = zap.PanicLevel
+	case "fatal":
+		level = zap.FatalLevel
+	default:
+		h.NegotiateErrorString(c, http.StatusBadRequest, `not support level`)
+		return
+	}
+
+	switch params.Tag {
+	case "file":
+		at = logger.Logger.FileLevel()
+	case "console":
+		at = logger.Logger.ConsoleLevel()
+	default:
+		h.NegotiateErrorString(c, http.StatusBadRequest, `not support tag`)
+		return
+	}
+
+	at.SetLevel(level)
+	if ce := logger.Logger.Check(zap.InfoLevel, c.Request.Method+` `+c.Request.URL.Path); ce != nil {
+		ce.Write(
+			zap.String(`tag`, params.Tag),
+			zap.String(`level`, params.Level),
+		)
+	}
 }
 func (h Logger) attach(c *gin.Context) {
 	ws, e := h.Upgrade(c.Writer, c.Request, nil)
@@ -60,4 +151,20 @@ func (h Logger) readWS(ws *websocket.Conn, done chan<- struct{}) {
 		}
 	}
 	close(done)
+}
+func (h Logger) download(c *gin.Context) {
+	var params struct {
+		Name string `uri:"name" binding:"required"`
+	}
+	e := h.BindURI(c, &params)
+	if e != nil {
+		return
+	}
+	filename, allowed := logger.DefaultFilesystem().Get(params.Name)
+	if !allowed {
+		h.NegotiateErrorString(c, http.StatusBadRequest, `Illegal name`)
+		return
+	}
+	c.Writer.Header().Set(`Cache-Control`, `max-age=0`)
+	http.ServeFile(c.Writer, c.Request, filename)
 }

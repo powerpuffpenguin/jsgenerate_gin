@@ -24,11 +24,14 @@ func (h Other) Register(router *gin.RouterGroup) {
 	router.GET(`version`, h.version)
 }
 func (h Other) version(c *gin.Context) {
-	h.NegotiateObject(c, startAt, gin.H{
-		`platform`: fmt.Sprintf(`%s %s %s gin-%s`, runtime.GOOS, runtime.GOARCH, runtime.Version(), gin.Version),
-		`tag`:      version.Tag,
-		`commit`:   version.Commit,
-		`date`:     version.Date,
-		`startAt`:  startAt.Unix(),
+	c.Writer.Header().Set(`Cache-Control`, `max-age=60`)
+	h.NegotiateDelay(c, startAt, func() (interface{}, error) {
+		return gin.H{
+			`platform`: fmt.Sprintf(`%s %s %s gin-%s`, runtime.GOOS, runtime.GOARCH, runtime.Version(), gin.Version),
+			`tag`:      version.Tag,
+			`commit`:   version.Commit,
+			`date`:     version.Date,
+			`startAt`:  startAt.Unix(),
+		}, nil
 	})
 }

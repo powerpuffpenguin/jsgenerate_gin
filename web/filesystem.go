@@ -116,3 +116,60 @@ func (r *objectReader) Seek(offset int64, whence int) (int64, error) {
 	}
 	return reader.Seek(offset, whence)
 }
+
+// NegotiateDelay .
+func (h Helper) NegotiateDelay(c *gin.Context, modtime time.Time, f func() (interface{}, error)) {
+	reader := &delayReader{
+		f: f,
+	}
+	switch c.NegotiateFormat(Offered...) {
+	case binding.MIMEXML:
+		c.Writer.Header().Set(`Content-Type`, `application/xml; charset=utf-8`)
+		reader.marshal = xml.Marshal
+	case binding.MIMEYAML:
+		c.Writer.Header().Set(`Content-Type`, `application/x-yaml; charset=utf-8`)
+		reader.marshal = yaml.Marshal
+	default:
+		// default use json
+		reader.marshal = json.Marshal
+		c.Writer.Header().Set(`Content-Type`, `application/json; charset=utf-8`)
+	}
+	http.ServeContent(c.Writer, c.Request, `test`, modtime, reader)
+}
+
+type delayReader struct {
+	f       func() (interface{}, error)
+	marshal func(v interface{}) ([]byte, error)
+	reader  *bytes.Reader
+}
+
+func (r *delayReader) getReader() (reader io.ReadSeeker, e error) {
+	if r.reader == nil {
+		var obj interface{}
+		if r.f != nil {
+			obj, e = r.f()
+		}
+		var b []byte
+		b, e = r.marshal(obj)
+		if e != nil {
+			return
+		}
+		r.reader = bytes.NewReader(b)
+	}
+	reader = r.reader
+	return
+}
+func (r *delayReader) Read(p []byte) (int, error) {
+	reader, e := r.getReader()
+	if e != nil {
+		return 0, e
+	}
+	return reader.Read(p)
+}
+func (r *delayReader) Seek(offset int64, whence int) (int64, error) {
+	reader, e := r.getReader()
+	if e != nil {
+		return 0, e
+	}
+	return reader.Seek(offset, whence)
+}
